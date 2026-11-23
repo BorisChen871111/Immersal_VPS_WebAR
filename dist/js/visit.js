@@ -71,28 +71,38 @@ start.onclick = async () => {
   start.disabled = true;
   status.textContent = '正在準備相機與展區…';
   try {
-    await requestOrientation();
-    const settings = await getSettings();
-    const [{ startVisitorWorld }, sequences] = await Promise.all([
-      import('./visit-world.js'),
-      loadVisitSequences(),
-    ]);
-    experience = await startVisitorWorld(feed, settings, sequences);
+    const endpoint = globalThis.WEBAR_VPS_ENDPOINT;
+    let sequences;
+    if (endpoint) {
+      const [world, images] = await Promise.all([import('./public-world.js'), loadVisitSequences()]);
+      sequences = images;
+      experience = await world.startPublicWorld(feed, endpoint, sequences);
+    } else {
+      await requestOrientation();
+      const settings = await getSettings();
+      const [world, images] = await Promise.all([import('./visit-world.js'), loadVisitSequences()]);
+      sequences = images;
+      experience = await world.startVisitorWorld(feed, settings, sequences);
+    }
     if (stopped) {
       experience.stop();
       return;
     }
     start.hidden = true;
     let previousMap;
+    let previousError = false;
     function render(time) {
       if (stopped) return;
       const map = experience.render(time, currentPage);
-      if (map !== previousMap) {
-        status.textContent = map ? `已定位 · ${map.name}` : '正在定位 · 請對準掃描過的展區';
+      const trackingError = Boolean(experience.trackingError);
+      if (map !== previousMap || trackingError !== previousError) {
+        status.textContent = map ? `已定位 · ${map.name}` :
+          trackingError ? '定位服務暫未回應 · 正在重試' : '正在定位 · 請對準掃描過的展區';
         controls.hidden = !map;
         next.disabled = !map;
       }
       previousMap = map;
+      previousError = trackingError;
       requestAnimationFrame(render);
     }
     setSequences(sequences, () => experience.restartSequence());
@@ -109,7 +119,12 @@ start.onclick = async () => {
     start.disabled = false;
   }
 };
-if (new URLSearchParams(location.search).get('preview') === '1') previewSequences();
+if (new URLSearchParams(location.search).get('preview') === '1' ||
+    (globalThis.WEBAR_PAGES_MODE && !globalThis.WEBAR_VPS_ENDPOINT)) {
+  previewSequences();
+} else if (globalThis.WEBAR_VPS_ENDPOINT) {
+  status.textContent = '開啟相機後，定位會將畫格送到 Immersal。請對準展區。';
+}
 window.addEventListener('pagehide', () => {
   stopped = true;
   experience?.stop();

@@ -1,0 +1,55 @@
+name: Publish WebAR to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Prepare public website
+        env:
+          VPS_API_BASE: ${{ vars.VPS_API_BASE }}
+        run: |
+          mkdir pages
+          cp -r dist/assets pages/
+          cp dist/visit.html pages/index.html
+          cp dist/style.css dist/visit.css pages/
+          mkdir pages/js
+          cp dist/js/{visit,visit-sequences,public-world}.js pages/js/
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs';
+          const value = (process.env.VPS_API_BASE || '').trim();
+          let endpoint = '';
+          if (value) {
+            const url = new URL(value);
+            if (url.protocol !== 'https:' || url.username || url.password || url.hash || url.search) {
+              throw new Error('VPS_API_BASE must be a public HTTPS URL without credentials.');
+            }
+            endpoint = new URL('vps/localize', url.href.replace(/\/?$/, '/')).href;
+          }
+          writeFileSync('pages/pages-runtime.js',
+            'globalThis.WEBAR_PAGES_MODE = true;\n' +
+            'globalThis.WEBAR_VPS_ENDPOINT = ' + JSON.stringify(endpoint) + ';\n');
+          JS
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages
+      - uses: actions/deploy-pages@v4
+        id: deployment

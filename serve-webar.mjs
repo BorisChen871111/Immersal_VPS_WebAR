@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCipheriv, randomBytes } from 'node:crypto';
+import { handlePublicVps } from './public-vps.mjs';
 
 const root = fileURLToPath(new URL('./dist', import.meta.url));
 const configFile = new URL('./webar.local.json', import.meta.url);
@@ -18,16 +19,23 @@ const reply = (res, code, data) => {
 };
 
 const phoneTest = process.argv.includes('--phone-test');
+const publicVps = process.argv.includes('--public-vps');
 const phoneKey = phoneTest ? randomBytes(32) : null;
-const port = phoneTest ? 8768 : 8767;
+const port = Number(process.env.PORT || (publicVps ? 8769 : phoneTest ? 8768 : 8767));
 createServer(async (req, res) => {
-  if (!phoneTest && req.headers.host !== `127.0.0.1:${port}` && req.headers.host !== `localhost:${port}`) {
+  if (!phoneTest && !publicVps && req.headers.host !== `127.0.0.1:${port}` && req.headers.host !== `localhost:${port}`) {
     return reply(res, 403, { error: 'localhost_only' });
   }
-  if (req.method !== 'GET') return reply(res, 405, { error: 'method' });
   try {
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
+    if (publicVps && url.pathname === '/vps/localize') return handlePublicVps(req, res, configFile);
+    if (req.method !== 'GET') return reply(res, 405, { error: 'method' });
+    if (publicVps && url.pathname === '/pages-runtime.js') {
+      res.writeHead(200, {'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store'});
+      return res.end('globalThis.WEBAR_PAGES_MODE=true;globalThis.WEBAR_VPS_ENDPOINT="/vps/localize";');
+    }
     if (url.pathname === '/local-vps-config') {
+      if (publicVps) return reply(res, 404, { error: 'not_found' });
       if (req.headers['sec-fetch-site'] === 'cross-site') return reply(res, 403, { error: 'origin' });
       const saved = JSON.parse((await readFile(configFile, 'utf8')).replace(/^\uFEFF/, ''));
       const developerToken = typeof saved.developerToken === 'string' ? saved.developerToken.trim() : '';
@@ -61,7 +69,7 @@ createServer(async (req, res) => {
     if (req.url === '/local-vps-config') return reply(res, 503, { error: 'settings_missing' });
     reply(res, error.code === 'ENOENT' ? 404 : 500, { error: 'request_failed' });
   }
-}).listen(port, '127.0.0.1', () => {
+}).listen(port, process.env.VPS_BIND || '127.0.0.1', () => {
   console.log(`WebAR: http://127.0.0.1:${port}/`);
   if (phoneTest) console.log(`Phone link fragment: #test=${phoneKey.toString('base64url')}`);
 });
