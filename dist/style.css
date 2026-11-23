@@ -1,0 +1,26 @@
+:root { color-scheme: dark; font-family: system-ui, sans-serif; color: #f6f6f0; background: #0d171d; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { width: min(65rem, 100%); margin: auto; padding: clamp(1rem, 4vw, 3rem); }
+header p { color: #ffac79; margin: 0 0 .35rem; font-weight: 700; }
+h1 { margin: 0 0 1.35rem; font-size: clamp(2rem, 6vw, 3.6rem); letter-spacing: -.035em; }
+nav, .choices, .controls { display: flex; flex-wrap: wrap; gap: .6rem; }
+nav { margin-bottom: .85rem; }
+.controls { margin-top: 1rem; justify-content: space-between; }
+button, a, input { font: inherit; }
+button, nav a, #download { border: 1px solid #53616a; border-radius: .65rem; padding: .65rem .85rem; color: inherit; background: #182730; cursor: pointer; text-decoration: none; min-height: 44px; }
+button:disabled { opacity: .5; cursor: default; }
+[aria-current], [aria-pressed="true"] { border-color: #ffac79; color: #ffbc94; }
+.primary, #download { background: #ffac79; color: #17140f; border-color: #ffac79; font-weight: 700; }
+.viewer { position: relative; isolation: isolate; overflow: hidden; height: clamp(18rem, 56svh, 36rem); background: #101e27; border: 1px solid #374954; border-radius: 1rem; }
+#feed, #overlay, #feed > * { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+#feed > *, #overlay { object-fit: cover; }
+#overlay { pointer-events: none; }
+#status { position: absolute; z-index: 1; top: .75rem; left: .75rem; margin: 0; padding: .5rem .75rem; max-width: calc(100% - 1.5rem); border-radius: .5rem; background: #0d171de8; }
+dialog { border: 1px solid #53616a; border-radius: 1rem; background: #182730; color: inherit; width: min(32rem, calc(100% - 2rem)); }
+dialog::backdrop { background: #000b; }
+dialog h2 { margin: 0 0 .75rem; }
+dialog label { display: grid; gap: .35rem; margin: .5rem 0; }
+dialog input { width: 100%; min-height: 44px; border: 1px solid #53616a; border-radius: .35rem; padding: .4rem; background: #0d171d; color: inherit; }
+fieldset { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .25rem .75rem; margin: .75rem 0; }
+#photo { display: block; width: 100%; max-height: 65vh; object-fit: contain; margin-bottom: .85rem; }

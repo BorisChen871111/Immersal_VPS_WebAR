@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d171d">
+  <title>高鐵探索館｜WebAR</title>
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./visit.css">
+</head>
+<body>
+  <main class="experience">
+    <header><p>高鐵探索館</p><h1>列車 AR 體驗</h1></header>
+    <section class="viewer" aria-label="AR 畫面">
+      <div id="feed"></div>
+      <p id="status" role="status">開啟相機後，請對準展區。</p>
+    </section>
+    <div class="experience-controls">
+      <button class="primary" id="startAr">開啟相機</button>
+      <div id="sequenceControls" hidden>
+        <p id="sequenceTitle" aria-live="polite"></p>
+        <button class="primary" id="nextSequence" disabled>下一頁</button>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="./js/visit.js"></script>
+</body>
+</html>

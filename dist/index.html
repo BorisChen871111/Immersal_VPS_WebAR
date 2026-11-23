@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d171d">
+  <title>高鐵探索館 WebAR</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <header><p>高鐵探索館</p><h1>WebAR 互動</h1></header>
+    <nav aria-label="體驗模式">
+      <a href="./" data-mode="demo">互動預覽</a>
+      <a href="?mode=world" data-mode="world">場域 AR</a>
+      <a href="?mode=face" data-mode="face">臉部特效</a>
+    </nav>
+    <section class="viewer" aria-label="體驗畫面">
+      <div id="feed"></div>
+      <p id="status" role="status"></p>
+      <canvas id="overlay" width="960" height="540" aria-label="互動畫面"></canvas>
+    </section>
+    <div class="controls">
+      <div class="choices" aria-label="效果選擇">
+        <button id="first" aria-pressed="true">列車進站</button>
+        <button id="second" aria-pressed="false">列車通過</button>
+      </div>
+      <div class="choices">
+        <button id="start">開啟相機</button>
+        <button class="primary" id="shoot">拍照</button>
+      </div>
+    </div>
+  </main>
+  <dialog id="settings">
+    <form id="setup">
+      <h2>Immersal 點位設定</h2>
+      <p>輸入地圖資料和錨點座標。權杖只用於此頁工作階段。</p>
+      <label>Map ID <input name="map" inputmode="numeric" pattern="[1-9][0-9]*" required></label>
+      <label>Developer Token <input name="token" type="password" autocomplete="off" required></label>
+      <fieldset>
+        <legend>錨點座標與朝向</legend>
+        <label>X <input name="x" type="number" step="any" required></label>
+        <label>Y <input name="y" type="number" step="any" required></label>
+        <label>Z <input name="z" type="number" step="any" required></label>
+        <label>Y 軸角度 <input name="yaw" type="number" step="any" value="0" required></label>
+      </fieldset>
+      <div class="choices"><button type="button" id="cancel">取消</button><button class="primary">開始場域定位</button></div>
+    </form>
+  </dialog>
+  <dialog id="preview">
+    <h2>照片預覽</h2>
+    <img id="photo" alt="剛拍攝的合成照片">
+    <div class="choices">
+      <button id="retake">重拍</button>
+      <a id="download" class="primary" download="高鐵探索館-WebAR.png">下載照片</a>
+    </div>
+  </dialog>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

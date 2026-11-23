@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THREE + Immersal VPS for Web</title>
+<link rel="stylesheet" href="css/styles.css">
+<meta id="theme-color" name="theme-color" content="#37474F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.min.js"></script>
+</head>
+
+<body class="placement-test">
+<div id="container"></div>
+<div id="uicontainer">
+  <div class="form-group">
+    <input type="radio" id="mode1" name="mode" value="ondevice" checked onclick="setMode('ondevice')"/>
+    <label for="mode1">On-device</label>
+    <input type="radio" id="mode2" name="mode" value="onserver" onclick="setMode('onserver')"/>
+    <label for="mode2">On-server</label>
+  </div>
+  <div id="devicelocui" class="form-group">
+    <input type="checkbox" id="contloc" checked onclick="toggleLoc(this)"/>
+    <label for="contloc">Continuous localization</label>
+    <button id="locButton" class="button">Localize on device</button>
+  </div>
+  <div id="serverlocui" class="form-group">
+    <button id="locServerButton" class="button">Localize on server</button>
+  </div>
+  <div id="latlon">lat: <span id="latitude">0</span>, lon: <span id="longitude">0</span>, alt: <span id="altitude">0</span></div>
+</div>
+<button id="permButton" class="button">Start AR</button>
+<span id="placementAim" aria-hidden="true" hidden></span>
+<section id="placement" aria-label="定位點放置測試" hidden>
+  <p id="placementMessage" role="status">等待定位 · 請對準掃描過的座位</p>
+  <label>放置距離
+    <select id="placementDistance">
+      <option value=".5">0.5 公尺</option>
+      <option value="1" selected>1 公尺</option>
+      <option value="1.5">1.5 公尺</option>
+      <option value="2">2 公尺</option>
+    </select>
+  </label>
+  <button type="button" id="placeObject" disabled>放置測試方塊</button>
+  <button type="button" id="removeObject" disabled>移除</button>
+</section>
+<script type="module">
+  import { immersalParams, setupVpsControls } from './js/imConfig.js';
+  import { Immersal, createOrientationSensor } from './js/immersal.js';
+  import { applyCameraIntrinsics, setupPlacement } from './js/placement.js';
+
+  const container = document.getElementById("container");
+  const uiContainer = document.getElementById("uicontainer");
+  const permButton = document.getElementById("permButton");
+  const locButton = document.getElementById("locButton");
+  const locServerButton = document.getElementById("locServerButton");
+  const lat = document.getElementById("latitude");
+  const lon = document.getElementById("longitude");
+  const alt = document.getElementById("altitude");
+
+  const P = new THREE.Vector3();
+  const Q = new THREE.Quaternion();
+  const QG = new THREE.Quaternion();
+  
+  let camera, scene, renderer, updatePlacement;
+  let immersal;
+  let mapHandle = -1;
+  let lastCount = 0;
+  let lastFixTime = -Infinity;
+  const maxPoseAge = 1500;
+
+  const init = async () => {
+    const mapId = immersalParams.mapIds[0];
+
+    immersal = await Immersal.Initialize(container, immersalParams);
+    mapHandle = await immersal.loadMap(mapId);
+
+    //await immersal.freeMap(mapHandle);
+
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.001, 10000);
+    scene = new THREE.Scene();
+
+    // renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
+
+    resize();
+
+    container.appendChild(renderer.domElement);
+
+    immersal.addEventListener('resize', () => {
+      lastCount = immersal.localization.counter;
+      lastFixTime = -Infinity;
+      resize();
+    });
+
+    uiContainer.style.display = "block";
+    updatePlacement = setupPlacement(THREE, camera, scene);
+
+    animate();
+  }
+
+  const updateVpsStatus = setupVpsControls(permButton, async () => {
+    await createOrientationSensor();
+    await init();
+  });
+
+  locButton.addEventListener("click", function(e) {
+    if (immersal) {
+      immersal.localizeDeviceAsync()
+      .then(result => {
+        console.log(`[IMMERSAL] On-device localization result:`, result);
+      })
+      .catch(e => {
+        console.log(e);
+      });
+    }
+  });
+
+  locServerButton.addEventListener("click", function(e) {
+    if (immersal) {
+      immersal.localizeServerAsync()
+      .then(result => {
+        console.log(`[IMMERSAL] On-server localization result:`, result);
+      })
+      .catch(e => {
+        console.log(e);
+      });
+    }
+  });
+
+  const resize = (e) => {
+    const video = immersal.camera?.el;
+    const w = video?.videoWidth;
+    const h = video?.videoHeight;
+    if (!w || !h) return;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false);
+  }
+
+  const animate = () => {
+    renderer.setAnimationLoop(render);
+  }
+
+  const render = (time) => {
+    if (mapHandle >= 0 && immersal.continuousLocalization) {
+      immersal.localizeDevice(time);
+    }
+
+    const count = immersal.localization.counter;
+    if (count !== lastCount) {
+      lastCount = count;
+      lastFixTime = count > 0 ? immersal.localizeInfo.lastSuccessfulFrame : -Infinity;
+    }
+    const fresh = time - lastFixTime < maxPoseAge && immersal.camera?.el.readyState >= 2;
+    const hasPlacementPose = fresh && (immersal.continuousLocalization ? count > 1 : count > 0)
+      && applyCameraIntrinsics(camera, immersal.cameraData);
+    updateVpsStatus(count, fresh);
+    if (hasPlacementPose) {
+      if (immersal.continuousLocalization) {
+        const {position, rotation} = immersal.getEstimatedPose(time);
+        P.fromArray(position);
+        Q.fromArray(rotation);
+      } else {
+        const {position, rotation} = immersal.localizeInfo;
+        P.set(position.x, position.y, position.z);
+        Q.set(rotation.x, rotation.y, rotation.z, rotation.w);
+      }
+
+      QG.set(immersal.gyroData.x, immersal.gyroData.y, immersal.gyroData.z, immersal.gyroData.w);
+      Q.multiply(QG);
+
+      camera.position.copy(P);
+      camera.quaternion.copy(Q);
+
+      const {elapsedTime, wgs84} = immersal.localizeInfo;
+      //console.log(`elapsedTime: ${elapsedTime*0.001}, latitude: ${wgs84.latitude}, longitude: ${wgs84.longitude}, altitude: ${wgs84.altitude}`);
+
+      lat.innerHTML = wgs84.latitude.toFixed(5);
+      lon.innerHTML = wgs84.longitude.toFixed(5);
+      alt.innerHTML = wgs84.altitude.toFixed(5);
+    }
+
+    updatePlacement(hasPlacementPose);
+
+    renderer.render(scene, camera);
+  }
+
+// UI functions
+
+  function setMode(mode) {
+    document.getElementById("devicelocui").style.display =
+      mode === "ondevice" ? "block" : "none";
+
+    document.getElementById("serverlocui").style.display =
+      mode === "onserver" ? "block" : "none";
+  }
+
+  function toggleLoc(box) {
+    immersal.continuousLocalization = box.checked;
+    locButton.style.display = (box.checked) ? "none" : "block";
+  }
+
+  window.setMode = setMode;
+  window.toggleLoc = toggleLoc;
+</script>
+</body>
+</html>
