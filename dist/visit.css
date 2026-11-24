@@ -1,5 +1,27 @@
+.experience { text-align: center; }
 .experience .viewer { height: clamp(18rem, 62svh, 43rem); }
 .experience .viewer canvas { object-fit: cover; object-position: center; }
+.experience #status { left: 50%; right: auto; transform: translateX(-50%); width: max-content; text-align: center; }
 .experience-controls { margin-top: 1rem; }
-#sequenceControls:not([hidden]) { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+#sequenceControls:not([hidden]) { display: flex; flex-direction: column; align-items: center; gap: .75rem; }
 #sequenceControls p { margin: 0; }
+
+body.camera-active { overflow: hidden; }
+.camera-active .experience { padding: 0; }
+.camera-active .experience header { display: none; }
+.camera-active .viewer { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 0; background: transparent; }
+.camera-active .experience #status {
+  top: calc(env(safe-area-inset-top, 0px) + .75rem);
+  background: transparent;
+  color: #fff;
+  text-shadow: 0 1px 4px #000, 0 1px 10px #000;
+}
+.camera-active .experience-controls {
+  position: fixed;
+  z-index: 2;
+  inset: auto 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  margin: 0;
+  pointer-events: none;
+}
+.camera-active #sequenceTitle { text-shadow: 0 1px 4px #000, 0 1px 10px #000; }
+.camera-active #nextSequence { pointer-events: auto; }

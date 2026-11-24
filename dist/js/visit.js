@@ -89,6 +89,7 @@ start.onclick = async () => {
       return;
     }
     start.hidden = true;
+    document.body.classList.add('camera-active');
     let previousMap;
     let previousError = false;
     function render(time) {
@@ -109,6 +110,7 @@ start.onclick = async () => {
     status.textContent = '正在定位 · 請對準掃描過的展區';
     requestAnimationFrame(render);
   } catch (error) {
+    document.body.classList.remove('camera-active');
     feed.querySelector('video')?.srcObject?.getTracks().forEach(track => track.stop());
     feed.replaceChildren();
     status.textContent = error.message === 'settings_missing' ? '展區尚未設定，請聯絡工作人員。' :
