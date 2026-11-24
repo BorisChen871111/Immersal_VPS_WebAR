@@ -27,6 +27,7 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
   let shooting = false;
   let photoUrl;
   let stopped = false;
+  let cameraAttempt = 0;
 
   const video = () => testMode ? testVideo : getLiveVideo();
   const hasPhoto = () => zone === 'photo' || zone === 'face';
@@ -50,38 +51,58 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
     if (!testMode || stopped || !hasPhoto() || testVideo || cameraButton.disabled) return;
     cameraButton.disabled = true;
     showFaceStatus('正在開啟相機 · 若出現提示，請允許相機權限。');
+    const attempt = ++cameraAttempt;
     let stream;
+    let camera;
+    let deadline;
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error('camera_unsupported');
-      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'user' } } });
+      const opening = (async () => {
+        const opened = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'user' } } });
+        if (attempt !== cameraAttempt || stopped || !hasPhoto()) {
+          opened.getTracks().forEach(track => track.stop());
+          return false;
+        }
+        stream = opened;
+        camera = document.createElement('video');
+        camera.autoplay = camera.defaultMuted = camera.muted = camera.playsInline = true;
+        camera.setAttribute('muted', '');
+        camera.setAttribute('playsinline', '');
+        camera.style.transform = 'scaleX(-1)';
+        feed.prepend(camera);
+        camera.srcObject = stream;
+        await camera.play();
+        return true;
+      })();
+      const timeout = new Promise((_, reject) => {
+        deadline = setTimeout(() => reject(new Error('camera_timeout')), 12000);
+      });
+      if (!await Promise.race([opening, timeout])) return;
       if (stopped || !hasPhoto()) {
         stream.getTracks().forEach(track => track.stop());
+        camera.remove();
         return;
       }
-      const camera = document.createElement('video');
-      camera.autoplay = camera.muted = camera.playsInline = true;
-      camera.srcObject = stream;
-      camera.style.transform = 'scaleX(-1)';
-      feed.prepend(camera);
       testVideo = camera;
-      await testVideo.play();
       document.body.classList.add('camera-active');
       cameraButton.hidden = true;
       showFaceStatus('');
     } catch (error) {
+      cameraAttempt++;
       stream?.getTracks().forEach(track => track.stop());
-      testVideo?.remove();
-      testVideo = undefined;
+      camera?.remove();
       if (hasPhoto()) {
-        const unsupported = ['camera_unsupported', 'NotSupportedError', 'NotFoundError'].includes(error.message) ||
+        const unsupported = error.message === 'camera_unsupported' ||
           ['NotSupportedError', 'NotFoundError'].includes(error.name);
         const message = unsupported ? '此瀏覽器無法使用相機，請用手機 Safari 或 Chrome 開啟測試連結。' :
           error.name === 'NotAllowedError' ? '相機權限未開啟。請允許後，點「重試相機」。' :
+          error.message === 'camera_timeout' ? '相機未在時間內開啟。請確認網站的相機權限，再點「重試相機」。' :
           '相機暫時無法開啟。請關閉其他使用相機的程式，再點「重試相機」。';
         showFaceStatus(message);
         cameraButton.textContent = '重試相機';
       }
     } finally {
+      clearTimeout(deadline);
       cameraButton.disabled = false;
       updateButton();
     }

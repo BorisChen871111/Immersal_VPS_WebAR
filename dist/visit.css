@@ -1,5 +1,5 @@
 .experience { text-align: center; }
-.experience .viewer { height: clamp(18rem, 62svh, 43rem); }
+.experience .viewer { height: clamp(18rem, 62vh, 43rem); height: clamp(18rem, 62svh, 43rem); }
 .experience .viewer canvas { object-fit: cover; object-position: center; }
 .experience #status { left: 50%; right: auto; transform: translateX(-50%); width: max-content; text-align: center; }
 .experience-controls { margin-top: 1rem; }

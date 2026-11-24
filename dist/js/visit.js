@@ -1,5 +1,5 @@
 import { drawVisitFrame, loadVisitSequences } from './visit-sequences.js';
-import { setupZonePhotos } from './zone-photos.js?v=2';
+import { setupZonePhotos } from './zone-photos.js?v=3';
 
 const start = document.querySelector('#startAr');
 const status = document.querySelector('#status');
@@ -11,7 +11,7 @@ let experience;
 let currentPage = 0;
 let stopped = false;
 const params = new URLSearchParams(location.search);
-const testMode = params.get('zones') === 'test';
+const testMode = document.body.hasAttribute('data-zone-test') || params.get('zones') === 'test';
 const photos = setupZonePhotos({ feed, testMode, getLiveVideo: () => feed.querySelector('video') });
 
 function setSequences(sequences, restart) {
@@ -52,6 +52,7 @@ async function startZoneTests() {
   start.hidden = true;
   document.body.classList.add('zone-test');
   const nav = document.querySelector('#zoneTests');
+  nav.removeAttribute('aria-busy');
   const buttons = [...nav.querySelectorAll('[data-test-zone]')];
   const lose = document.querySelector('#loseZone');
   let currentZone = null;
@@ -74,6 +75,7 @@ async function startZoneTests() {
     }
   }
   buttons.forEach(button => {
+    button.disabled = false;
     button.onclick = () => {
       const selected = button.dataset.testZone;
       if (selected !== currentZone) changeZone(selected);

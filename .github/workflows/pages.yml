@@ -34,7 +34,21 @@ jobs:
           mkdir pages/js
           cp dist/js/{visit,visit-sequences,public-world,zone-photos,zone-face}.js pages/js/
           node --input-type=module <<'JS'
-          import { writeFileSync } from 'node:fs';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const page = readFileSync('pages/index.html', 'utf8');
+          const testPage = page
+            .replace('<body>', '<body data-zone-test>')
+            .replace('aria-label="展區定位測試" hidden', 'aria-label="展區定位測試" aria-busy="true"')
+            .replace('開啟相機後，請對準展區。', '正在載入測試功能…')
+            .replace('</body>', `<script>
+              setTimeout(function () {
+                var zones = document.getElementById('zoneTests');
+                if (zones.hasAttribute('aria-busy')) {
+                  document.getElementById('status').textContent = '測試功能沒有載入，請重新整理，或更新手機瀏覽器後再開啟。';
+                }
+              }, 8000);
+              </script></body>`);
+          writeFileSync('pages/test.html', testPage);
           const value = (process.env.VPS_API_BASE || '').trim();
           let endpoint = '';
           if (value) {

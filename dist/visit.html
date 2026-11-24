@@ -6,15 +6,15 @@
   <meta name="theme-color" content="#0d171d">
   <title>高鐵探索館｜WebAR</title>
   <link rel="stylesheet" href="./style.css">
-  <link rel="stylesheet" href="./visit.css">
+  <link rel="stylesheet" href="./visit.css?v=3">
 </head>
 <body>
   <main class="experience">
     <header><p>高鐵探索館</p><h1>WebAR 展區體驗</h1></header>
     <nav id="zoneTests" aria-label="展區定位測試" hidden>
-      <button type="button" data-test-zone="train" aria-pressed="false">展區 1 · 列車</button>
-      <button type="button" data-test-zone="photo" aria-pressed="false">展區 2 · 拍照</button>
-      <button type="button" data-test-zone="face" aria-pressed="false">展區 3 · 臉部追蹤</button>
+      <button type="button" data-test-zone="train" aria-pressed="false" disabled>展區 1 · 列車</button>
+      <button type="button" data-test-zone="photo" aria-pressed="false" disabled>展區 2 · 拍照</button>
+      <button type="button" data-test-zone="face" aria-pressed="false" disabled>展區 3 · 臉部追蹤</button>
       <button type="button" id="loseZone" disabled>模擬失去定位</button>
     </nav>
     <section class="viewer" aria-label="AR 畫面">
@@ -46,6 +46,6 @@
     </div>
   </dialog>
   <script src="./pages-runtime.js"></script>
-  <script type="module" src="./js/visit.js?v=2"></script>
+  <script type="module" src="./js/visit.js?v=3"></script>
 </body>
 </html>
