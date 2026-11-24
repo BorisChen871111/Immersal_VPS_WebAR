@@ -4,7 +4,6 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
   const ui = id => document.getElementById(id);
   const overlay = ui('zoneOverlay');
   const paint = overlay.getContext('2d');
-  const cameraButton = ui('enableTestCamera');
   const shoot = ui('takePhoto');
   const countdown = ui('photoCountdown');
   const flash = ui('photoFlash');
@@ -28,6 +27,7 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
   let photoUrl;
   let stopped = false;
   let cameraAttempt = 0;
+  let cameraOpening = false;
 
   const video = () => testMode ? testVideo : getLiveVideo();
   const hasPhoto = () => zone === 'photo' || zone === 'face';
@@ -48,9 +48,9 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
   }
 
   async function openTestCamera() {
-    if (!testMode || stopped || !hasPhoto() || testVideo || cameraButton.disabled) return;
-    cameraButton.disabled = true;
-    showFaceStatus('正在開啟相機 · 若出現提示，請允許相機權限。');
+    if (!testMode || stopped || cameraOpening) return false;
+    if (testVideo) return true;
+    cameraOpening = true;
     const attempt = ++cameraAttempt;
     let stream;
     let camera;
@@ -58,17 +58,17 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error('camera_unsupported');
       const opening = (async () => {
-        const opened = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'user' } } });
-        if (attempt !== cameraAttempt || stopped || !hasPhoto()) {
+        const opened = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { exact: 'environment' } } });
+        if (attempt !== cameraAttempt || stopped) {
           opened.getTracks().forEach(track => track.stop());
           return false;
         }
         stream = opened;
+        if (stream.getVideoTracks()[0]?.getSettings().facingMode === 'user') throw new Error('rear_camera_unavailable');
         camera = document.createElement('video');
         camera.autoplay = camera.defaultMuted = camera.muted = camera.playsInline = true;
         camera.setAttribute('muted', '');
         camera.setAttribute('playsinline', '');
-        camera.style.transform = 'scaleX(-1)';
         feed.prepend(camera);
         camera.srcObject = stream;
         await camera.play();
@@ -77,38 +77,26 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
       const timeout = new Promise((_, reject) => {
         deadline = setTimeout(() => reject(new Error('camera_timeout')), 12000);
       });
-      if (!await Promise.race([opening, timeout])) return;
-      if (stopped || !hasPhoto()) {
+      if (!await Promise.race([opening, timeout])) return false;
+      if (stopped) {
         stream.getTracks().forEach(track => track.stop());
         camera.remove();
-        return;
+        return false;
       }
       testVideo = camera;
-      document.body.classList.add('camera-active');
-      cameraButton.hidden = true;
-      showFaceStatus('');
+      return true;
     } catch (error) {
       cameraAttempt++;
       stream?.getTracks().forEach(track => track.stop());
       camera?.remove();
-      if (hasPhoto()) {
-        const unsupported = error.message === 'camera_unsupported' ||
-          ['NotSupportedError', 'NotFoundError'].includes(error.name);
-        const message = unsupported ? '此瀏覽器無法使用相機，請用手機 Safari 或 Chrome 開啟測試連結。' :
-          error.name === 'NotAllowedError' ? '相機權限未開啟。請允許後，點「重試相機」。' :
-          error.message === 'camera_timeout' ? '相機未在時間內開啟。請確認網站的相機權限，再點「重試相機」。' :
-          '相機暫時無法開啟。請關閉其他使用相機的程式，再點「重試相機」。';
-        showFaceStatus(message);
-        cameraButton.textContent = '重試相機';
-      }
+      if (['NotFoundError', 'OverconstrainedError'].includes(error.name)) throw new Error('rear_camera_unavailable');
+      throw error;
     } finally {
       clearTimeout(deadline);
-      cameraButton.disabled = false;
+      cameraOpening = false;
       updateButton();
     }
   }
-  cameraButton.onclick = openTestCamera;
-
   function drawFace(time) {
     if (zone !== 'face') return;
     const source = video();
@@ -140,8 +128,8 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
         faceError = true;
       }
     }
-    if (points) drawFaceCube(paint, points, source, testMode);
-    showFaceStatus(points ? '' : '請讓臉進入畫面。');
+    if (points) drawFaceCube(paint, points, source);
+    showFaceStatus(points ? '' : '請用後鏡頭對準人臉。');
   }
 
   function capture(ticket) {
@@ -161,13 +149,7 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
     const scale = Math.max(canvas.width / source.videoWidth, canvas.height / source.videoHeight);
     const w = source.videoWidth * scale;
     const h = source.videoHeight * scale;
-    ctx.save();
-    if (testMode) {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-    }
     ctx.drawImage(source, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
-    ctx.restore();
     if (zone === 'face') ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
     flash.classList.remove('firing');
     void flash.offsetWidth;
@@ -227,9 +209,7 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
       videoTime = -1;
       clearPhoto();
       showFaceStatus('');
-      cameraButton.textContent = '開啟測試相機';
       ui('photoControls').hidden = !hasPhoto();
-      cameraButton.hidden = !testMode || !hasPhoto() || Boolean(testVideo);
       updateButton();
     },
     render(time, train, drawTrain) {

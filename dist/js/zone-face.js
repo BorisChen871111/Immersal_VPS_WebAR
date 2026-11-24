@@ -8,11 +8,11 @@ export async function createZoneFace() {
   });
 }
 
-export function drawFaceCube(ctx, points, video, mirror) {
+export function drawFaceCube(ctx, points, video) {
   const { width, height } = ctx.canvas;
   const scale = Math.max(width / video.videoWidth, height / video.videoHeight);
   const map = index => [
-    width / 2 + (mirror ? .5 - points[index].x : points[index].x - .5) * video.videoWidth * scale,
+    width / 2 + (points[index].x - .5) * video.videoWidth * scale,
     height / 2 + (points[index].y - .5) * video.videoHeight * scale,
   ];
   const eyes = [map(33), map(263)].sort((left, right) => left[0] - right[0]);

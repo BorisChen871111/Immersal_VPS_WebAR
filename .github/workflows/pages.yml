@@ -40,7 +40,7 @@ jobs:
           writeFileSync('pages/index.html', page);
           const testPage = page
             .replace('<body>', '<body data-zone-test>')
-            .replace('aria-label="展區定位測試" hidden', 'aria-label="展區定位測試" aria-busy="true"')
+            .replace('aria-label="展區定位測試" hidden', 'aria-label="展區定位測試" aria-busy="true" hidden')
             .replace('開啟相機後，請對準展區。', '正在載入測試功能…')
             .replace('</body>', `<script>
               setTimeout(function () {

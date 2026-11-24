@@ -1,5 +1,5 @@
 import { drawVisitFrame, loadVisitSequences } from './visit-sequences.js';
-import { setupZonePhotos } from './zone-photos.js?v=3';
+import { setupZonePhotos } from './zone-photos.js?v=5';
 
 const start = document.querySelector('#startAr');
 const status = document.querySelector('#status');
@@ -49,7 +49,6 @@ async function previewSequences() {
 }
 
 async function startZoneTests() {
-  start.hidden = true;
   document.body.classList.add('zone-test');
   const nav = document.querySelector('#zoneTests');
   nav.removeAttribute('aria-busy');
@@ -75,16 +74,32 @@ async function startZoneTests() {
     }
   }
   buttons.forEach(button => {
-    button.disabled = false;
     button.onclick = () => {
       const selected = button.dataset.testZone;
       if (selected !== currentZone) changeZone(selected);
-      if (selected === 'photo' || selected === 'face') void photos.openTestCamera();
     };
   });
   lose.onclick = () => changeZone(null);
-  nav.hidden = false;
-  changeZone(null);
+  status.textContent = '開啟後鏡頭後，即可選擇測試展區。';
+  start.onclick = async () => {
+    start.disabled = true;
+    status.textContent = '正在開啟後鏡頭，請允許相機權限。';
+    try {
+      if (!await photos.openTestCamera() || stopped) return;
+      document.body.classList.add('camera-active');
+      start.hidden = true;
+      nav.hidden = false;
+      buttons.forEach(button => { button.disabled = false; });
+      changeZone(null);
+    } catch (error) {
+      status.textContent = error.message === 'rear_camera_unavailable' ? '找不到後鏡頭，請用有後鏡頭的手機重新開啟。' :
+        error.name === 'NotAllowedError' ? '請在瀏覽器允許相機，再點「重試相機」。' :
+        error.message === 'camera_timeout' ? '相機未在時間內開啟，請確認相機權限後重試。' :
+        '無法開啟相機，請使用手機 Safari 或 Chrome 再試。';
+      start.textContent = '重試相機';
+      start.disabled = false;
+    }
+  };
   loadVisitSequences().then(loaded => {
     sequences = loaded;
     setSequences(sequences, resetPlayback);
