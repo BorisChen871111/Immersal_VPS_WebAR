@@ -15,11 +15,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      artifact_name: ${{ steps.release.outputs.artifact_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
@@ -64,8 +63,21 @@ jobs:
             'globalThis.WEBAR_PAGES_MODE = true;\n' +
             'globalThis.WEBAR_VPS_ENDPOINT = ' + JSON.stringify(endpoint) + ';\n');
           JS
+      - name: Name this build
+        id: release
+        run: echo "artifact_name=github-pages-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-pages-artifact@v3
         with:
+          name: ${{ steps.release.outputs.artifact_name }}
           path: pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - uses: actions/deploy-pages@v4
         id: deployment
+        with:
+          artifact_name: ${{ needs.build.outputs.artifact_name }}
