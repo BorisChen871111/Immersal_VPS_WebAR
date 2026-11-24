@@ -35,7 +35,9 @@ jobs:
           cp dist/js/{visit,visit-sequences,public-world,zone-photos,zone-face}.js pages/js/
           node --input-type=module <<'JS'
           import { readFileSync, writeFileSync } from 'node:fs';
-          const page = readFileSync('pages/index.html', 'utf8');
+          const page = readFileSync('pages/index.html', 'utf8')
+            .replace('href="./?zones=test"', 'href="./test.html"');
+          writeFileSync('pages/index.html', page);
           const testPage = page
             .replace('<body>', '<body data-zone-test>')
             .replace('aria-label="展區定位測試" hidden', 'aria-label="展區定位測試" aria-busy="true"')

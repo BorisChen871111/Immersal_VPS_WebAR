@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0d171d">
   <title>高鐵探索館｜WebAR</title>
   <link rel="stylesheet" href="./style.css">
-  <link rel="stylesheet" href="./visit.css?v=3">
+  <link rel="stylesheet" href="./visit.css?v=4">
 </head>
 <body>
   <main class="experience">
@@ -17,16 +17,15 @@
       <button type="button" data-test-zone="face" aria-pressed="false" disabled>展區 3 · 臉部追蹤</button>
       <button type="button" id="loseZone" disabled>模擬失去定位</button>
     </nav>
-    <section class="viewer" aria-label="AR 畫面">
-      <div id="feed"></div>
-      <canvas id="zoneOverlay" aria-hidden="true" hidden></canvas>
+    <div class="experience-messages">
       <p id="status" role="status">開啟相機後，請對準展區。</p>
       <output id="faceStatus" role="status" hidden></output>
-      <output id="photoCountdown" role="status" hidden></output>
-      <div id="photoFlash" aria-hidden="true"></div>
-    </section>
+    </div>
     <div class="experience-controls">
-      <button class="primary" id="startAr">開啟相機</button>
+      <div class="before-camera">
+        <button class="primary" id="startAr">開啟相機</button>
+        <a id="openZoneTests" href="./?zones=test">進入三展區測試</a>
+      </div>
       <div id="sequenceControls" hidden>
         <p id="sequenceTitle" aria-live="polite"></p>
         <button class="primary" id="nextSequence" disabled>下一頁</button>
@@ -36,6 +35,12 @@
         <button type="button" class="primary" id="takePhoto" disabled>拍照</button>
       </div>
     </div>
+    <section class="viewer" aria-label="AR 畫面">
+      <div id="feed"></div>
+      <canvas id="zoneOverlay" aria-hidden="true" hidden></canvas>
+      <output id="photoCountdown" role="status" hidden></output>
+      <div id="photoFlash" aria-hidden="true"></div>
+    </section>
   </main>
   <dialog id="photoResult" aria-labelledby="photoHeading">
     <h2 id="photoHeading">照片預覽</h2>
@@ -46,6 +51,6 @@
     </div>
   </dialog>
   <script src="./pages-runtime.js"></script>
-  <script type="module" src="./js/visit.js?v=3"></script>
+  <script type="module" src="./js/visit.js?v=4"></script>
 </body>
 </html>
