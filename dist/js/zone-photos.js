@@ -46,10 +46,13 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
     download.removeAttribute('href');
   }
 
-  cameraButton.onclick = async () => {
+  async function openTestCamera() {
+    if (!testMode || stopped || !hasPhoto() || testVideo || cameraButton.disabled) return;
     cameraButton.disabled = true;
+    showFaceStatus('正在開啟相機 · 若出現提示，請允許相機權限。');
     let stream;
     try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('camera_unsupported');
       stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'user' } } });
       if (stopped || !hasPhoto()) {
         stream.getTracks().forEach(track => track.stop());
@@ -64,16 +67,26 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
       await testVideo.play();
       document.body.classList.add('camera-active');
       cameraButton.hidden = true;
-    } catch {
+      showFaceStatus('');
+    } catch (error) {
       stream?.getTracks().forEach(track => track.stop());
       testVideo?.remove();
       testVideo = undefined;
-      if (hasPhoto()) showFaceStatus('請在瀏覽器允許相機，再試一次。');
+      if (hasPhoto()) {
+        const unsupported = ['camera_unsupported', 'NotSupportedError', 'NotFoundError'].includes(error.message) ||
+          ['NotSupportedError', 'NotFoundError'].includes(error.name);
+        const message = unsupported ? '此瀏覽器無法使用相機，請用手機 Safari 或 Chrome 開啟測試連結。' :
+          error.name === 'NotAllowedError' ? '相機權限未開啟。請允許後，點「重試相機」。' :
+          '相機暫時無法開啟。請關閉其他使用相機的程式，再點「重試相機」。';
+        showFaceStatus(message);
+        cameraButton.textContent = '重試相機';
+      }
     } finally {
       cameraButton.disabled = false;
       updateButton();
     }
-  };
+  }
+  cameraButton.onclick = openTestCamera;
 
   function drawFace(time) {
     if (zone !== 'face') return;
@@ -179,6 +192,7 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
   ui('closePhoto').onclick = clearPhoto;
 
   return {
+    openTestCamera,
     enter(next, identity = next) {
       if (zone === next && zoneIdentity === identity) return;
       zone = next;
@@ -192,6 +206,7 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
       videoTime = -1;
       clearPhoto();
       showFaceStatus('');
+      cameraButton.textContent = '開啟測試相機';
       ui('photoControls').hidden = !hasPhoto();
       cameraButton.hidden = !testMode || !hasPhoto() || Boolean(testVideo);
       updateButton();

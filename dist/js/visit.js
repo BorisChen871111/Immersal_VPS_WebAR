@@ -1,5 +1,5 @@
 import { drawVisitFrame, loadVisitSequences } from './visit-sequences.js';
-import { setupZonePhotos } from './zone-photos.js';
+import { setupZonePhotos } from './zone-photos.js?v=2';
 
 const start = document.querySelector('#startAr');
 const status = document.querySelector('#status');
@@ -56,6 +56,7 @@ async function startZoneTests() {
   const lose = document.querySelector('#loseZone');
   let currentZone = null;
   let sequences;
+  let sequencesFailed = false;
   let startedAt = performance.now();
   const resetPlayback = () => { startedAt = performance.now(); };
   const zoneNames = { train: '展區 1 · 列車', photo: '展區 2 · 拍照', face: '展區 3 · 臉部追蹤' };
@@ -68,9 +69,16 @@ async function startZoneTests() {
     lose.disabled = !zone;
     buttons.forEach(button => button.setAttribute('aria-pressed', String(zone === button.dataset.testZone)));
     status.textContent = zone ? '模擬已定位 · ' + zoneNames[zone] : '尚未定位 · 選擇展區開始測試';
+    if (zone === 'train' && !sequences) {
+      status.textContent = sequencesFailed ? '序列圖載入失敗，請重新整理後再試。' : '模擬已定位 · 正在載入列車動畫…';
+    }
   }
   buttons.forEach(button => {
-    button.onclick = () => changeZone(button.dataset.testZone === currentZone ? null : button.dataset.testZone);
+    button.onclick = () => {
+      const selected = button.dataset.testZone;
+      if (selected !== currentZone) changeZone(selected);
+      if (selected === 'photo' || selected === 'face') void photos.openTestCamera();
+    };
   });
   lose.onclick = () => changeZone(null);
   nav.hidden = false;
@@ -80,7 +88,8 @@ async function startZoneTests() {
     setSequences(sequences, resetPlayback);
     if (currentZone === 'train') changeZone('train');
   }).catch(() => {
-    if (currentZone === 'train') status.textContent = '序列圖載入失敗。';
+    sequencesFailed = true;
+    if (currentZone === 'train') changeZone('train');
   });
   function render(time) {
     if (stopped) return;
