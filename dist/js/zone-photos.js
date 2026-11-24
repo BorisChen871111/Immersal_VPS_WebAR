@@ -165,9 +165,10 @@ export function setupZonePhotos({ feed, getLiveVideo, testMode }) {
       if (ticket !== generation) return;
       const remaining = end - performance.now();
       if (remaining > 0) {
+        const digit = Math.ceil(remaining / 1000);
         countdown.hidden = false;
-        countdown.textContent = Math.ceil(remaining / 1000);
-        timer = setTimeout(tick, Math.min(remaining, 70));
+        countdown.textContent = String(digit);
+        timer = setTimeout(tick, Math.max(1, remaining - (digit - 1) * 1000));
       } else {
         countdown.hidden = true;
         capture(ticket);
