@@ -86,7 +86,7 @@ export async function startPublicWorld(feed, endpoint, sequences) {
         camera.aspect = video.videoWidth / video.videoHeight;
       }
       const fix = result && time - result.captured < 2500 ? result : null;
-      plate.visible = Boolean(fix);
+      plate.visible = Boolean(fix && (!fix.experience || fix.experience === 'train'));
       let zone = null;
       if (fix) {
         camera.fov = fix.fov;
@@ -100,7 +100,7 @@ export async function startPublicWorld(feed, endpoint, sequences) {
           camera.getWorldDirection(facing);
           const position = fix.anchor ? new THREE.Vector3(...fix.anchor) : camera.position.clone().addScaledVector(facing, 1.35);
           const yaw = fix.anchor ? THREE.MathUtils.degToRad(fix.yaw) : Math.atan2(-facing.x, -facing.z);
-          zone = { name: fix.name, position, yaw };
+          zone = { name: fix.name, experience: fix.experience, position, yaw };
           anchors.set(fix.zone, zone);
         }
         if (active !== zone) {
@@ -112,7 +112,7 @@ export async function startPublicWorld(feed, endpoint, sequences) {
         startedAt ??= time;
         const sequence = sequences[page];
         const index = Math.floor((time - startedAt) * sequence.fps / 1000) % sequence.images.length;
-        if (index !== frameIndex) {
+        if (plate.visible && index !== frameIndex) {
           frameIndex = drawVisitFrame(paint, sequence, time - startedAt);
           texture.needsUpdate = true;
         }

@@ -85,12 +85,13 @@ export async function handlePublicVps(req, res, configFile) {
     if (!result.success) return send(200, { found: false });
     const index = maps.findIndex(map => map.mapId === result.map);
     if (index < 0) return send(200, { found: false });
-    const { anchor, name, yaw } = maps[index];
+    const { anchor, name, yaw, experience } = maps[index];
     const position = [result.px, result.py, result.pz];
     const rotation = ['r00','r01','r02','r10','r11','r12','r20','r21','r22'].map(key => result[key]);
     if (![...position, ...rotation].every(Number.isFinite)) return send(502, { error: 'invalid_pose' });
     return send(200, {
       found: true, zone: index, name: String(name || `展區 ${index + 1}`),
+      experience: ['train', 'photo', 'face'].includes(experience) ? experience : 'train',
       anchor: Array.isArray(anchor) && anchor.length === 3 && anchor.every(Number.isFinite) ? anchor : null,
       yaw: Number.isFinite(yaw) ? yaw : 0, position, rotation,
     });

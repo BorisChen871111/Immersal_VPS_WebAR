@@ -43,6 +43,7 @@ createServer(async (req, res) => {
         .map(map => ({
           mapId: map.mapId,
           name: String(map.name || `展點 ${map.mapId}`),
+          experience: ['train', 'photo', 'face'].includes(map.experience) ? map.experience : 'train',
           anchor: hasAnchor(map.anchor) ? map.anchor : null,
           yaw: Number.isFinite(map.yaw) ? map.yaw : 0,
         })) : [];

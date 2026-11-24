@@ -15,3 +15,9 @@
 要啟用定位，在有 HTTPS 的伺服器執行 `node serve-webar.mjs --public-vps`。將 `IMMERSAL_CONFIG_JSON` 設為私密環境變數（結構同範例設定），或在主機上使用本機設定檔。用 `VPS_ALLOWED_ORIGINS` 指定可呼叫 API 的前端 origin（逗號分隔、不加路徑）。若前後端在同一網域，設定 `VPS_PUBLIC_ORIGIN`。伺服器預設綁定 loopback，可由 HTTPS 反向代理導入；容器環境可以設定 `VPS_BIND` 和 `PORT`。
 
 在 GitHub Settings → Secrets and variables → Actions → Variables 將 `VPS_API_BASE` 設為 API 主機的 HTTPS 網址，重新執行 Pages workflow。自訂前端網域時，更新允許的 origin 和 Pages 的 Custom domain，並依 GitHub 指示設定 DNS。公開模式的相機畫格會送到 Immersal 定位。Token 與原始 Map ID 留在伺服器，Pages 只包含 API 網址與公開素材。
+
+## 三展區測試
+
+在訪客網址加上 `?zones=test`，可用三個按鈕模擬定位，切站或按「模擬失去定位」會清掉前站內容。兩個拍照展區使用前鏡頭測試，不呼叫 VPS。照片會在裝置上合成；若手機擋下自動下載，可以點預覽上的「儲存照片」。
+
+正式地圖完成後，在伺服器設定的各個 `maps` 項目中填入 `experience`，可用 `train`、`photo`、`face`。既有設定預設為 `train`。正式模式的場域定位與臉部特效共用後鏡頭。

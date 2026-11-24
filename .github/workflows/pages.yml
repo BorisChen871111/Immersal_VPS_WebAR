@@ -32,7 +32,7 @@ jobs:
           cp dist/visit.html pages/index.html
           cp dist/style.css dist/visit.css pages/
           mkdir pages/js
-          cp dist/js/{visit,visit-sequences,public-world}.js pages/js/
+          cp dist/js/{visit,visit-sequences,public-world,zone-photos,zone-face}.js pages/js/
           node --input-type=module <<'JS'
           import { writeFileSync } from 'node:fs';
           const value = (process.env.VPS_API_BASE || '').trim();

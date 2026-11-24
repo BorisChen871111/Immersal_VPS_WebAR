@@ -1,4 +1,5 @@
 import { drawVisitFrame, loadVisitSequences } from './visit-sequences.js';
+import { setupZonePhotos } from './zone-photos.js';
 
 const start = document.querySelector('#startAr');
 const status = document.querySelector('#status');
@@ -9,6 +10,9 @@ const feed = document.querySelector('#feed');
 let experience;
 let currentPage = 0;
 let stopped = false;
+const params = new URLSearchParams(location.search);
+const testMode = params.get('zones') === 'test';
+const photos = setupZonePhotos({ feed, testMode, getLiveVideo: () => feed.querySelector('video') });
 
 function setSequences(sequences, restart) {
   title.textContent = sequences[currentPage].title;
@@ -42,6 +46,49 @@ async function previewSequences() {
   } catch {
     status.textContent = '序列圖載入失敗，請檢查素材檔。';
   }
+}
+
+async function startZoneTests() {
+  start.hidden = true;
+  document.body.classList.add('zone-test');
+  const nav = document.querySelector('#zoneTests');
+  const buttons = [...nav.querySelectorAll('[data-test-zone]')];
+  const lose = document.querySelector('#loseZone');
+  let currentZone = null;
+  let sequences;
+  let startedAt = performance.now();
+  const resetPlayback = () => { startedAt = performance.now(); };
+  const zoneNames = { train: '展區 1 · 列車', photo: '展區 2 · 拍照', face: '展區 3 · 臉部追蹤' };
+  function changeZone(zone) {
+    currentZone = zone;
+    photos.enter(zone);
+    resetPlayback();
+    controls.hidden = zone !== 'train' || !sequences;
+    next.disabled = controls.hidden;
+    lose.disabled = !zone;
+    buttons.forEach(button => button.setAttribute('aria-pressed', String(zone === button.dataset.testZone)));
+    status.textContent = zone ? '模擬已定位 · ' + zoneNames[zone] : '尚未定位 · 選擇展區開始測試';
+  }
+  buttons.forEach(button => {
+    button.onclick = () => changeZone(button.dataset.testZone === currentZone ? null : button.dataset.testZone);
+  });
+  lose.onclick = () => changeZone(null);
+  nav.hidden = false;
+  changeZone(null);
+  loadVisitSequences().then(loaded => {
+    sequences = loaded;
+    setSequences(sequences, resetPlayback);
+    if (currentZone === 'train') changeZone('train');
+  }).catch(() => {
+    if (currentZone === 'train') status.textContent = '序列圖載入失敗。';
+  });
+  function render(time) {
+    if (stopped) return;
+    photos.render(time, currentZone === 'train' && Boolean(sequences),
+      ctx => drawVisitFrame(ctx, sequences[currentPage], time - startedAt));
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
 }
 
 async function getSettings() {
@@ -99,9 +146,12 @@ start.onclick = async () => {
       if (map !== previousMap || trackingError !== previousError) {
         status.textContent = map ? `已定位 · ${map.name}` :
           trackingError ? '定位服務暫未回應 · 正在重試' : '正在定位 · 請對準掃描過的展區';
-        controls.hidden = !map;
-        next.disabled = !map;
+        const zone = map ? map.experience || 'train' : null;
+        photos.enter(zone, map);
+        controls.hidden = zone !== 'train';
+        next.disabled = controls.hidden;
       }
+      photos.render(time, false);
       previousMap = map;
       previousError = trackingError;
       requestAnimationFrame(render);
@@ -121,7 +171,9 @@ start.onclick = async () => {
     start.disabled = false;
   }
 };
-if (new URLSearchParams(location.search).get('preview') === '1' ||
+if (testMode) {
+  startZoneTests();
+} else if (params.get('preview') === '1' ||
     (globalThis.WEBAR_PAGES_MODE && !globalThis.WEBAR_VPS_ENDPOINT)) {
   previewSequences();
 } else if (globalThis.WEBAR_VPS_ENDPOINT) {
@@ -129,6 +181,7 @@ if (new URLSearchParams(location.search).get('preview') === '1' ||
 }
 window.addEventListener('pagehide', () => {
   stopped = true;
+  photos.stop();
   experience?.stop();
 });
 window.addEventListener('pageshow', event => {

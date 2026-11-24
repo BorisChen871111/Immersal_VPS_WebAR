@@ -86,7 +86,7 @@ export async function startVisitorWorld(feed, { developerToken, maps }, sequence
         Math.min(width, height, fx, fy) > 0;
       const map = calibrated && video?.readyState >= 2 && time - lastFix < 1500 && candidateCount >= 2 ?
         candidate : null;
-      billboard.visible = Boolean(map);
+      billboard.visible = Boolean(map && (!map.experience || map.experience === 'train'));
       if (map) {
         const { near, far } = camera;
         camera.projectionMatrix.makePerspective(
@@ -112,7 +112,7 @@ export async function startVisitorWorld(feed, { developerToken, maps }, sequence
         startedAt ??= time;
         const sequence = sequences[page];
         const frame = Math.floor((time - startedAt) * sequence.fps / 1000) % sequence.images.length;
-        if (frame !== lastFrame) {
+        if (billboard.visible && frame !== lastFrame) {
           lastFrame = drawVisitFrame(paint, sequence, time - startedAt);
           texture.needsUpdate = true;
         }
